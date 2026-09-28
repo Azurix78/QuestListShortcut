@@ -1,0 +1,20 @@
+## Interface: 16001
+## Title: QuestListShortcut
+## Notes: Collapse quest categories and manage quest tracking globally or by zone.
+## Notes-frFR: Replier les catégories et gérer le suivi des quêtes globalement ou par zone.
+## Notes-deDE: Questkategorien einklappen und die Questverfolgung global oder pro Zone verwalten.
+## Notes-esES: Contrae categorías y gestiona el seguimiento de misiones globalmente o por zona.
+## Notes-esMX: Contrae categorías y gestiona el seguimiento de misiones globalmente o por zona.
+## Notes-itIT: Comprimi le categorie e gestisci il monitoraggio delle missioni globalmente o per zona.
+## Notes-ptBR: Recolha categorias e gerencie o rastreamento de missões globalmente ou por zona.
+## Notes-ruRU: Сворачивайте категории и управляйте отслеживанием заданий целиком или по зонам.
+## Notes-koKR: 퀘스트 분류를 접고 전체 또는 지역별 퀘스트 추적을 관리합니다.
+## Notes-zhCN: 折叠任务分类，并管理全部或单个区域的任务追踪。
+## Notes-zhTW: 收合任務分類，並管理全部或單一區域的任務追蹤。
+## Author: Syntaxucre
+## Version: 1.2.0
+## X-License: MIT
+
+Localization.lua
+Core.lua
+ZoneTracking.lua
