@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- The global category button now switches to Open all when every category is collapsed, and back to Collapse all when any category is open. Both actions clear the search first.
+- Added Normal / Compact text size in the quest log's gear menu. Compact reduces zone names, quest titles and objective text by 20% while preserving the client font.
+- Remember the text size across sessions for the account; Normal is the default.
+- Localized the new controls in every supported language.
+- Added regression tests for expanding categories, saved settings and pooled font restoration. In-game layout and taint validation remain required.
+
 ## 1.2.0
 
 - Centralized all UI text in a shared localization module.

@@ -12,9 +12,11 @@
 ## Notes-zhCN: 折叠任务分类，并管理全部或单个区域的任务追踪。
 ## Notes-zhTW: 收合任務分類，並管理全部或單一區域的任務追蹤。
 ## Author: Syntaxucre
-## Version: 1.2.0
+## Version: 1.3.0
+## SavedVariables: QuestListShortcutDB
 ## X-License: MIT
 
 Localization.lua
+TextSize.lua
 Core.lua
 ZoneTracking.lua

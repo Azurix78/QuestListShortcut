@@ -4,14 +4,33 @@ local L = addon.L
 local FOOTER_HEIGHT = 32
 local events = CreateFrame("Frame")
 local bar, scrollFrame, questsFrame, bottomAnchor
+local updateHooked = false
+
+local function HeaderState()
+    local count, allCollapsed = 0, true
+    if C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function"
+        and type(C_QuestLog.GetInfo) == "function" then
+        for index = 1, C_QuestLog.GetNumQuestLogEntries() do
+            local info = C_QuestLog.GetInfo(index)
+            if info and info.isHeader then
+                count = count + 1
+                if not info.isCollapsed then allCollapsed = false end
+            end
+        end
+    end
+    return count > 0 and allCollapsed, count
+end
 
 local function CollapseUnavailable()
+    local expand, count = HeaderState()
     if not C_QuestLog or type(C_QuestLog.GetNumQuestLogEntries) ~= "function"
-        or type(C_QuestLog.GetInfo) ~= "function" or type(CollapseQuestHeader) ~= "function"
+        or type(C_QuestLog.GetInfo) ~= "function"
+        or (expand and type(ExpandQuestHeader) ~= "function")
+        or (not expand and type(CollapseQuestHeader) ~= "function")
         or not scrollFrame.SearchBox or type(scrollFrame.SearchBox.Clear) ~= "function" then
         return L.unavailable
     end
-    if C_QuestLog.GetNumQuestLogEntries() == 0 then
+    if count == 0 then
         return L.emptyLog
     end
 end
@@ -44,6 +63,11 @@ end
 
 local function RefreshButtons()
     if not bar then return end
+    local expand = HeaderState()
+    local button = bar.buttons[1]
+    button.label = expand and L.expand or L.collapse
+    button.description = expand and L.expandTip or L.collapseTip
+    button:SetText(button.label)
     for _, button in ipairs(bar.buttons) do
         button:SetEnabled(button.unavailable() == nil)
         if GameTooltip:IsOwned(button) then
@@ -52,17 +76,22 @@ local function RefreshButtons()
     end
 end
 
-local function CollapseAll()
+local function ToggleAll()
     if CollapseUnavailable() then
         RefreshButtons()
         return
     end
-    -- Clear through Blizzard's method FIRST: ending a search restores saved headers.
+    -- Choose the displayed action before Clear restores pre-search header states.
+    local expand = HeaderState()
     scrollFrame.SearchBox:Clear()
     for index = C_QuestLog.GetNumQuestLogEntries(), 1, -1 do
         local info = C_QuestLog.GetInfo(index)
-        if info and info.isHeader and not info.isCollapsed then
-            CollapseQuestHeader(index)
+        if info and info.isHeader then
+            if expand and info.isCollapsed then
+                ExpandQuestHeader(index)
+            elseif not expand and not info.isCollapsed then
+                CollapseQuestHeader(index)
+            end
         end
     end
     -- Blizzard refreshes the contents in response to QUEST_LOG_UPDATE.
@@ -131,6 +160,10 @@ local function UpdateVisibility()
 end
 
 local function Initialize()
+    if not updateHooked and type(QuestLogQuests_Update) == "function" then
+        hooksecurefunc("QuestLogQuests_Update", RefreshButtons)
+        updateHooked = true
+    end
     if bar then return true end
     local panel = QuestMapFrame and QuestMapFrame.QuestsFrame
     local list = panel and panel.ScrollFrame
@@ -151,7 +184,7 @@ local function Initialize()
     bar:SetPoint("BOTTOMLEFT", questsFrame, "BOTTOMLEFT", 0, bottomAnchor[5])
     bar:SetPoint("BOTTOMRIGHT", bottomAnchor[2], bottomAnchor[3], bottomAnchor[4], bottomAnchor[5])
 
-    local collapse = CreateButton(L.collapse, L.collapseTip, CollapseUnavailable, CollapseAll)
+    local collapse = CreateButton(L.collapse, L.collapseTip, CollapseUnavailable, ToggleAll)
     local untrack = CreateButton(L.untrack, L.untrackTip, UntrackUnavailable, UntrackAll)
     collapse:SetPoint("LEFT", bar, "LEFT", 0, 0)
     untrack:SetPoint("RIGHT", bar, "RIGHT", 0, 0)

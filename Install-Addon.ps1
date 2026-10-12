@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 try {
     $addonSource = Join-Path $PSScriptRoot 'QuestListShortcut'
-    foreach ($requiredFile in @('QuestListShortcut.toc', 'Localization.lua', 'Core.lua', 'ZoneTracking.lua')) {
+    foreach ($requiredFile in @('QuestListShortcut.toc', 'Localization.lua', 'TextSize.lua', 'Core.lua', 'ZoneTracking.lua')) {
         if (-not (Test-Path -LiteralPath (Join-Path $addonSource $requiredFile) -PathType Leaf)) {
             throw "Fichier source introuvable : QuestListShortcut\$requiredFile. Gardez le dossier de l addon a cote du script."
         }

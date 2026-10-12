@@ -4,10 +4,11 @@
 
 Quest-log shortcuts for **World of Warcraft: Forever**, by **Syntaxucre**.
 
-- Collapse every quest category with one click.
+- Collapse or open every quest category with one click.
 - Untrack all quests without abandoning them.
 - Track or untrack an entire zone from its header checkbox.
-- Automatic client-language selection with English fallback. No addon dependencies or configuration.
+- Normal / Compact text size from the quest log's gear menu, remembered across sessions.
+- Automatic client-language selection with English fallback. No addon dependencies.
 
 Targets Forever **1.60.1 / interface 16001**. Other WoW editions are not supported by this package.
 
@@ -28,7 +29,7 @@ npm install
 npm test
 ```
 
-Node dependencies are development-only and are never included in the addon. The suite checks Lua 5.1 syntax and runs 34 scenarios with simulated WoW APIs, including all translations and the actual TOC loading order. With a standalone Lua interpreter, `lua tests/run.lua` runs the behavior checks directly.
+Node dependencies are development-only and are never included in the addon. The suite checks Lua 5.1 syntax and runs 43 scenarios with simulated WoW APIs, including all translations, category toggling, saved text-size settings, font restoration and the actual TOC loading order. With a standalone Lua interpreter, `lua tests/run.lua` runs the behavior checks directly.
 
 Rendering, translated text layout, combat restrictions and taint still need in-game validation. See the [manual checks](docs/README.fr.md#vérifications-en-jeu). For a bug report, include the addon version, client build and language, reproduction steps and the full Lua error.
 

@@ -7,7 +7,7 @@ function run() {
   const parser = require('luaparse');
   const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require('fengari');
   const root = path.resolve(__dirname, '..');
-  for (const file of ['QuestListShortcut/Localization.lua', 'QuestListShortcut/Core.lua', 'QuestListShortcut/ZoneTracking.lua', 'tests/run.lua']) {
+  for (const file of ['QuestListShortcut/Localization.lua', 'QuestListShortcut/TextSize.lua', 'QuestListShortcut/Core.lua', 'QuestListShortcut/ZoneTracking.lua', 'tests/run.lua']) {
     parser.parse(fs.readFileSync(path.join(root, file), 'utf8'), { luaVersion: '5.1' });
     log('Lua 5.1 syntax OK: ' + file);
   }

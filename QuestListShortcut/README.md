@@ -6,11 +6,20 @@ Small quest-log shortcuts for World of Warcraft: Forever (1.60.1, interface 1600
 
 ## Features
 
-- **Collapse all** clears the search and folds every quest category.
+- **Collapse all** clears the search and folds every quest category. When all categories are closed, it becomes **Open all**, which clears the search and opens them. Individual categories remain freely openable and collapsible.
 - **Untrack all** removes tracking from all quests without abandoning them.
 - A checkbox next to each zone header manages tracking for that zone: empty or partially checked means **Track all**; fully checked means **Clear tracking**.
 - Zone actions include quests hidden by search or collapsed categories. Other zones and your automatic tracking setting are unchanged.
-- Tooltips explain each action, show zone tracking counts and indicate restrictions. No configuration or dependencies required.
+- Tooltips explain each action, show zone tracking counts and indicate restrictions. No dependencies required.
+
+## Text size
+
+Open the gear menu at the top right of the quest list, then **QuestListShortcut: Text size**:
+
+- **Normal** (default): the original text size.
+- **Compact**: zone names, quest titles and objectives are 20% smaller, using the same client font. Quest row heights are recalculated by the game.
+
+The change applies immediately to the list. Quest details and the rest of the interface keep their usual size. The choice is saved account-wide in `QuestListShortcutDB` and survives `/reload` and game restarts. Select Normal to restore the original sizes.
 
 ## Languages
 

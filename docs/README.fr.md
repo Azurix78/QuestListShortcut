@@ -1,13 +1,22 @@
 # QuestListShortcut
 
-Des raccourcis en bas de la liste des quêtes et une case de suivi par zone, pour **WoW Forever 1.60.1** (interface **16001**, client cible **70009**). Version de l'addon : **1.2.0**, par **Syntaxucre**, sous [licence MIT](../LICENSE).
+Des raccourcis en bas de la liste des quêtes et une case de suivi par zone, pour **WoW Forever 1.60.1** (interface **16001**, client cible **70009**). Version de l'addon : **1.3.0**, par **Syntaxucre**, sous [licence MIT](../LICENSE).
 
-- **Tout replier** efface la recherche puis replie toutes les catégories. Tu peux ensuite les rouvrir individuellement.
+- **Tout replier** efface la recherche puis replie toutes les catégories. Lorsque toutes sont fermées, le bouton devient **Tout déplier**, qui efface la recherche et ouvre toutes les catégories. Tu peux toujours ouvrir ou fermer chaque catégorie individuellement.
 - **Arrêter le suivi** retire immédiatement toutes les quêtes suivies, même masquées par une recherche ou une catégorie repliée. Les quêtes restent dans le journal. Le réglage de suivi automatique du jeu reste inchangé : le jeu peut donc suivre de nouveau une quête par la suite.
 
 Les boutons utilisent le style Blizzard et la langue du client. Une bande de 32 pixels d'interface est réservée sous la liste. Les raccourcis disparaissent dans les détails d'une quête. Une action indisponible est grisée, avec la raison dans son infobulle.
 
-Aucun réglage, commande slash, dépendance externe ou donnée sauvegardée.
+Aucune commande slash ni dépendance externe.
+
+## Taille du texte
+
+Dans la roue dentée en haut à droite de la liste des quêtes, ouvrir **QuestListShortcut: Taille du texte** et choisir :
+
+- **Normal** : taille originale, utilisée par défaut.
+- **Compact** : textes des régions, titres de quêtes et objectifs réduits de 20 %, avec la police du client conservée. Le jeu recalcule les hauteurs des lignes de quêtes.
+
+Le changement est immédiat dans la liste. Les détails des quêtes et le reste de l'interface conservent leur taille habituelle. Le choix est sauvegardé pour le compte dans `QuestListShortcutDB`, y compris après `/reload` ou un redémarrage du jeu. Revenir sur Normal restaure les tailles originales.
 
 ## Langues
 
@@ -38,7 +47,7 @@ La version destinée aux sites et gestionnaires d'addons se génère avec :
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-Release.ps1
 ```
 
-L'archive **dist/QuestListShortcut-1.2.0.zip** contient un unique dossier `QuestListShortcut/`, sans installateur Windows ni tests. Le nom de la prochaine archive sera déterminé par `## Version` dans le TOC.
+L'archive **dist/QuestListShortcut-1.3.0.zip** contient un unique dossier `QuestListShortcut/`, sans installateur Windows ni tests. Le nom de la prochaine archive sera déterminé par `## Version` dans le TOC.
 
 Le [guide de publication CurseForge](PUBLISHING.fr.md) fournit le résumé anglais, les métadonnées et les vérifications restantes. Le [guide anglais pour les joueurs](../QuestListShortcut/README.md), le changelog et la licence MIT sont inclus dans l'archive. Les scripts d'installation Windows restent disponibles dans ce projet pour ton installation locale.
 
@@ -95,7 +104,7 @@ Le dossier livré est prêt à copier ; lancer l'installateur ou effectuer la co
 
 La validation hors jeu ne peut pas garantir le rendu, l'absence de taint ou les restrictions de cette bêta. La compatibilité du build 70009 reste à confirmer dans le client.
 
-- Mélanger des catégories ouvertes et fermées, puis cliquer sur **Tout replier** : toutes doivent se fermer. Répéter le clic, puis rouvrir manuellement une catégorie.
+- Mélanger des catégories ouvertes et fermées, puis cliquer sur **Tout replier** : toutes doivent se fermer. Le bouton doit devenir **Tout déplier** ; cliquer pour tout ouvrir. Replier toutes les catégories manuellement : le libellé doit également changer.
 - Lancer une recherche, puis replier : la recherche doit être effacée et toutes les catégories fermées.
 - Suivre plusieurs quêtes réparties dans plusieurs catégories, en masquer par recherche, puis arrêter le suivi : aucune quête ne doit rester suivie et le nombre de quêtes du journal doit rester identique.
 - Répéter avec une seule quête suivie, aucune quête suivie et un journal vide. Les actions sans cible doivent être grisées.
@@ -103,6 +112,8 @@ La validation hors jeu ne peut pas garantir le rendu, l'absence de taint ou les 
 - Ouvrir une quête, revenir à la liste, fermer et rouvrir la carte, puis faire `/reload` : aucun doublon ni décalage progressif des boutons.
 - Tester hors combat et en combat ; si le jeu interdit le retrait du suivi, le bouton doit être grisé et l'infobulle doit l'expliquer.
 - Vérifier BugSack après ces actions. En cas de problème, conserver le texte complet de l'erreur, le build du client et l'action effectuée.
+- Passer de Normal à Compact et inversement depuis la roue dentée : contrôler les régions, les titres longs et les objectifs multilignes, sans chevauchement. Répéter après ouverture/fermeture de catégories et changement de zone, en combat et hors combat. Vérifier que la taille ne diminue pas à chaque réutilisation des lignes.
+- Choisir Compact puis faire `/reload` et redémarrer le jeu : le choix doit être conservé. Revenir sur Normal pour vérifier la restauration des tailles. Contrôler aussi les polices asiatiques si un client est disponible.
 - Dans une zone avec plusieurs quêtes, cliquer sur sa case : tout suivre, puis tout désuivre. Vérifier qu'une quête suivie dans une autre zone le reste.
 - Suivre une seule quête de cette zone : la case affiche un tiret ; cliquer complète le suivi. Refaire le test avec la zone repliée et avec une recherche active.
 - Accepter ou terminer une quête, changer de carte et modifier le suivi individuellement : les cases doivent se mettre à jour sans doublon ni action sur une autre zone.
@@ -112,8 +123,8 @@ Le jeu conserve ses comportements natifs : changer de carte ou survoler un marqu
 
 ## Développement
 
-Validation effectuée : syntaxe Lua 5.1 vérifiée avec `luaparse`, et **34 scénarios simulés réussis** avec Fengari. Ces tests couvrent les indices qui changent pendant les opérations, la recherche, les restrictions natives, les API absentes, le chargement différé, la visibilité, les ancrages répétés, le suivi par zone, les états partiels, les limites de suivi et la réutilisation des en-têtes. Les tests de langues vérifient les 12 codes de client ci-dessus, les clés complètes, les marqueurs de formatage, les libellés et les infobulles, le retour à l'anglais et le chargement réel dans l'ordre du TOC. Aucun essai visuel ou fonctionnel n'a encore été effectué dans WoW.
+Validation effectuée : syntaxe Lua 5.1 vérifiée avec `luaparse`, et **43 scénarios simulés réussis** avec Fengari. Ces tests couvrent les indices qui changent pendant les opérations, la recherche, les restrictions natives, les API absentes, le chargement différé, la visibilité, les ancrages répétés, le suivi par zone, les états partiels, les limites de suivi et la réutilisation des en-têtes. Les tests de langues vérifient les 12 codes de client ci-dessus, les clés complètes, les marqueurs de formatage, les libellés et les infobulles, le retour à l'anglais et le chargement réel dans l'ordre du TOC. Aucun essai visuel ou fonctionnel n'a encore été effectué dans WoW.
 
-Les actions globales sont dans `QuestListShortcut/Core.lua`, et le suivi par zone dans `QuestListShortcut/ZoneTracking.lua`. `Localization.lua` est chargé en premier et partage ses textes via la table privée de l'addon fournie par WoW. Les tests de régression utilisent des API WoW simulées, sans accès au jeu. Depuis la racine, lancer `npm install` puis `npm test`, ou `lua tests/run.lua` avec Lua 5.1 ou ultérieur. Les dépendances Node.js sont uniquement utilisées pour le développement.
+Les actions globales sont dans `QuestListShortcut/Core.lua`, le suivi par zone dans `QuestListShortcut/ZoneTracking.lua` et la taille du texte dans `QuestListShortcut/TextSize.lua`. Les nouveaux tests couvrent aussi la bascule replier/déplier, la restauration des polices et le chargement des réglages sauvegardés. `Localization.lua` est chargé en premier et partage ses textes via la table privée de l'addon fournie par WoW. Les tests de régression utilisent des API WoW simulées, sans accès au jeu. Depuis la racine, lancer `npm install` puis `npm test`, ou `lua tests/run.lua` avec Lua 5.1 ou ultérieur. Les dépendances Node.js sont uniquement utilisées pour le développement.
 
 Références consultées : [panneau Forever (Lua)](https://raw.githubusercontent.com/Gethe/wow-ui-source/forever/Interface/AddOns/Blizzard_UIPanels_Game/Mainline/QuestMapFrame.lua), [ancrages du panneau (XML)](https://raw.githubusercontent.com/Gethe/wow-ui-source/forever/Interface/AddOns/Blizzard_UIPanels_Game/Mainline/QuestMapFrame.xml), [API du journal](https://raw.githubusercontent.com/Gethe/wow-ui-source/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua).

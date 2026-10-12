@@ -13,7 +13,7 @@ local function check(name, test)
     print("PASS: " .. name)
 end
 
-local function setup(deferred, locale)
+local function setup(deferred, locale, saved)
     local state = { frames = {}, watches = { 101, 201, 301 }, allowed = true,
         removed = {}, added = {}, messages = {}, search = "Stormwind", cleared = false }
     local entries = {
@@ -48,6 +48,11 @@ local function setup(deferred, locale)
     function frame:ClearAllPoints() self.points = {} end
     function frame:GetWidth() return self.width or (self.parent and self.parent:GetWidth()) or 300 end
     function frame:SetText(value) self.text = value end
+    function frame:GetFont() return self.font or "Fonts/locale.ttf", self.fontSize or 20, self.fontFlags or "OUTLINE" end
+    function frame:SetFont(file, size, flags)
+        self.font, self.fontSize, self.fontFlags = file, size, flags
+        self.fontWrites = (self.fontWrites or 0) + 1
+    end
     function frame:SetEnabled(value) self.enabled = value end
     function frame:SetMotionScriptsWhileDisabled(value) self.motionWhileDisabled = value end
     function frame:SetVerticalScroll(value) self.verticalScroll = value end
@@ -133,14 +138,57 @@ local function setup(deferred, locale)
         assert(entry and entry.isHeader, "Invalid header after indices shifted")
         entry.isCollapsed = true
     end
+    ExpandQuestHeader = function(index)
+        assert(state.cleared, "Search must be cleared before expanding")
+        local entry = visibleEntries()[index]
+        assert(entry and entry.isHeader, "Invalid header after indices shifted")
+        entry.isCollapsed = false
+    end
     SetCVar = function() error("Must not change CVars") end
     AbandonQuest = function() error("Must not abandon a quest") end
     C_QuestLog.SetAbandonQuest = AbandonQuest
-    QuestListShortcutBar, QuestMapFrame = nil, nil
-    QuestLogQuests_Update = function() end
-    hooksecurefunc = function(name, hook)
-        local original = _G[name]
-        _G[name] = function(...) original(...); hook(...) end
+    QuestListShortcutBar, QuestMapFrame, QuestListShortcutDB = nil, nil, nil
+    QuestLogQuests_Update = function() state.updates = (state.updates or 0) + 1 end
+    hooksecurefunc = function(target, name, hook)
+        if type(target) == "string" then target, name, hook = _G, target, name end
+        local original = target[name]
+        target[name] = function(...)
+            local result = { original(...) }
+            hook(...)
+            return (unpack or table.unpack)(result)
+        end
+    end
+    Menu = { ModifyMenu = function(tag, callback)
+        assert(tag == "MENU_QUEST_MAP_FRAME_SETTINGS")
+        state.menuRegistrations = (state.menuRegistrations or 0) + 1
+        state.menuCallback = callback
+    end }
+    function state.menu()
+        local root = { radios = {} }
+        function root:CreateDivider() self.divider = true end
+        function root:CreateButton(label) self.label = label; return self end
+        function root:CreateRadio(label, selected, setter, data)
+            self.radios[data] = { label = label, selected = function() return selected(data) end,
+                click = function() setter(data) end }
+        end
+        state.menuCallback(nil, root)
+        return root
+    end
+    function state.newPool(active)
+        return { EnumerateActive = function()
+            local index = 0
+            return function() index = index + 1; return active()[index] end
+        end, Acquire = function(_, row)
+            active()[#active() + 1] = row
+            return row, true
+        end }
+    end
+    function state.makeRow()
+        local row = CreateFrame("Frame")
+        row.Text = CreateFrame("FontString", nil, row)
+        row.Dash = CreateFrame("FontString", nil, row)
+        row.TagText = CreateFrame("FontString", nil, row)
+        return row
     end
     function state.makePanel()
         local panel = CreateFrame("Frame")
@@ -148,16 +196,17 @@ local function setup(deferred, locale)
         list:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -29)
         list:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 3)
         list.SearchBox = { Clear = function()
+            if state.search ~= "" then
+                -- Simulate Blizzard restoring header state at the end of a search.
+                entries[1].isCollapsed, entries[3].isCollapsed, entries[5].isCollapsed = false, true, false
+            end
             state.search, state.cleared = "", true
-            -- Simulate Blizzard restoring header state at the end of a search.
-            entries[1].isCollapsed, entries[3].isCollapsed, entries[5].isCollapsed = false, true, false
         end }
         panel.ScrollFrame = list
-        state.headers = {}
-        list.headerFramePool = { EnumerateActive = function()
-            local index = 0
-            return function() index = index + 1; return state.headers[index] end
-        end }
+        state.headers, state.titles, state.objectives = {}, {}, {}
+        list.headerFramePool = state.newPool(function() return state.headers end)
+        list.titleFramePool = state.newPool(function() return state.titles end)
+        list.objectiveFramePool = state.newPool(function() return state.objectives end)
         QuestMapFrame = { QuestsFrame = panel }
         state.panel, state.list = panel, list
     end
@@ -168,9 +217,9 @@ local function setup(deferred, locale)
         local file = line:match("^%s*([^#%s].-)%s*$")
         if file then assert(loadfile(addonRoot .. "/" .. file))("QuestListShortcut", state.addon) end
     end
-    function state.emit(event)
+    function state.emit(event, ...)
         for _, object in ipairs(state.frames) do
-            if object.events[event] and object.scripts.OnEvent then object.scripts.OnEvent(object, event) end
+            if object.events[event] and object.scripts.OnEvent then object.scripts.OnEvent(object, event, ...) end
         end
     end
     function state.click(index)
@@ -191,6 +240,9 @@ local function setup(deferred, locale)
         end
         error("Zone button missing")
     end
+    -- Reproduce WoW restoring SavedVariables after loading Lua, before this event.
+    QuestListShortcutDB = saved
+    state.emit("ADDON_LOADED", "QuestListShortcut")
     return state
 end
 
@@ -205,6 +257,54 @@ check("search restoration precedes collapse; shrinking indices and repeated clic
     state.entries[1].isCollapsed = false
     state.emit("QUEST_LOG_UPDATE")
     assert(not state.entries[1].isCollapsed, "Must not collapse automatically")
+end)
+
+check("toggle label follows all-closed and mixed headers, including native updates", function()
+    local state = setup()
+    local button, L = QuestListShortcutBar.buttons[1], state.addon.L
+    state.click(1)
+    assert(button.text == L.expand and button.description == L.expandTip)
+    button.scripts.OnEnter(button)
+    assert(GameTooltip.title == L.expand and GameTooltip.lines[1] == L.expandTip)
+    state.click(1)
+    for _, entry in ipairs(state.entries) do
+        if entry.isHeader then assert(not entry.isCollapsed) end
+    end
+    assert(button.text == L.collapse and GameTooltip.title == L.collapse)
+    for _, entry in ipairs(state.entries) do
+        if entry.isHeader then entry.isCollapsed = true end
+    end
+    QuestLogQuests_Update()
+    assert(button.text == L.expand)
+    state.entries[3].isCollapsed = false
+    QuestLogQuests_Update()
+    assert(button.text == L.collapse and not state.entries[3].isCollapsed)
+end)
+
+check("expand intent survives search restoring a mixed header state", function()
+    local state = setup()
+    for _, entry in ipairs(state.entries) do
+        if entry.isHeader then entry.isCollapsed = true end
+    end
+    state.emit("QUEST_LOG_UPDATE")
+    assert(QuestListShortcutBar.buttons[1].text == state.addon.L.expand)
+    state.click(1)
+    assert(state.search == "")
+    for _, entry in ipairs(state.entries) do
+        if entry.isHeader then assert(not entry.isCollapsed) end
+    end
+end)
+
+check("missing expansion API only disables expansion; no headers stays disabled", function()
+    local state = setup()
+    ExpandQuestHeader = nil
+    state.click(1)
+    assert(not QuestListShortcutBar.buttons[1].enabled)
+    state.click(1)
+    assert(state.entries[1].isCollapsed)
+    C_QuestLog.GetInfo = function() return { questID = 101 } end
+    state.emit("QUEST_LOG_UPDATE")
+    assert(not QuestListShortcutBar.buttons[1].enabled)
 end)
 
 check("snapshot removes every watch despite index shifts and a search filter", function()
@@ -485,6 +585,97 @@ check("missing translation falls back per key", function()
     state.addon.L.count = nil
     assert(state.addon.L.count:format(2, 3) == "2 / 3 quests tracked")
     assert(state.addon.L.collapse == "Tout replier")
+end)
+
+check("normal default; localized gear radios; one registration", function()
+    local state = setup()
+    local menu = state.menu()
+    assert(QuestListShortcutDB.textMode == "normal" and menu.radios.normal.selected())
+    assert(menu.radios.compact.label == state.addon.L.compact)
+    assert(menu.label == "QuestListShortcut: " .. state.addon.L.textSize)
+    state.emit("PLAYER_LOGIN")
+    state.emit("ADDON_LOADED", "SomeAddon")
+    QuestLogQuests_Update()
+    assert(state.menuRegistrations == 1)
+end)
+
+check("compact affects all list text before measurement, preserving locale fonts", function()
+    local state = setup(false, "koKR")
+    state.menu().radios.compact.click()
+    for _, name in ipairs({ "headerFramePool", "titleFramePool", "objectiveFramePool" }) do
+        local row = state.makeRow()
+        local result, new = state.list[name]:Acquire(row)
+        assert(result == row and new, "Pool return values must survive the hook")
+        for _, text in ipairs({ row.Text, row.Dash, row.TagText }) do
+            local file, size, flags = text:GetFont()
+            assert(file == "Fonts/locale.ttf" and size == 16 and flags == "OUTLINE")
+        end
+    end
+    assert(state.menu().radios.compact.selected())
+    assert(state.search == "Stormwind" and #state.watches == 3 and not state.entries[1].isCollapsed)
+end)
+
+check("reused fonts do not shrink repeatedly and Normal restores exact originals", function()
+    local state = setup()
+    local row = state.makeRow()
+    row.Text:SetFont("Fonts/custom.ttf", 17, "THICKOUTLINE")
+    state.list.titleFramePool:Acquire(row)
+    local menu = state.menu()
+    for iteration = 1, 3 do
+        menu.radios.compact.click()
+        for reuse = 1, 5 do
+            state.titles = {}
+            state.list.titleFramePool:Acquire(row)
+            QuestLogQuests_Update()
+        end
+        local _, size = row.Text:GetFont()
+        assert(math.abs(size - 13.6) < 0.001)
+        menu.radios.normal.click()
+        local file, normalSize, flags = row.Text:GetFont()
+        assert(file == "Fonts/custom.ttf" and normalSize == 17 and flags == "THICKOUTLINE")
+    end
+    assert(row.Text.fontWrites == 7, "Only one write per actual mode transition")
+end)
+
+check("saved Compact survives addon load and deferred panel creation", function()
+    local state = setup(true, "zhTW", { textMode = "compact" })
+    assert(state.menu().radios.compact.selected())
+    state.emit("PLAYER_LOGIN")
+    state.makePanel()
+    state.emit("ADDON_LOADED", "Blizzard_UIPanels_Game")
+    local row = state.makeRow()
+    state.list.objectiveFramePool:Acquire(row)
+    local _, size = row.Text:GetFont()
+    assert(size == 16)
+    local saved = QuestListShortcutDB
+    state = setup(false, "zhTW", saved)
+    assert(state.menu().radios.compact.selected())
+    state.list.titleFramePool:Acquire(state.makeRow())
+    assert(state.titles[1].Text.fontSize == 16)
+end)
+
+check("mode switch rebuilds visible list; inactive rows update when reused", function()
+    local state = setup()
+    local row = state.makeRow()
+    state.list.titleFramePool:Acquire(row)
+    local before = state.updates or 0
+    state.menu().radios.compact.click()
+    assert(state.updates == before + 1)
+    state.titles = {}
+    state.list:Hide()
+    before = state.updates
+    state.menu().radios.normal.click()
+    assert(state.updates == before, "Do not rebuild hidden quest details")
+    state.list:Show()
+    state.list.titleFramePool:Acquire(row)
+    assert(row.Text.fontSize == 20)
+end)
+
+check("invalid saved settings fall back to Normal", function()
+    for _, saved in ipairs({ "invalid", { textMode = "invalid" }, {} }) do
+        local state = setup(false, "enUS", saved)
+        assert(state.menu().radios.normal.selected())
+    end
 end)
 
 print(tostring(passed) .. " tests passed. In-game validation remains required.")
